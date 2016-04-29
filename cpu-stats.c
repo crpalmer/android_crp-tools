@@ -27,15 +27,16 @@ int main(int argc, char **argv)
                         FILE *f2;
                         unsigned long long user, nice, system, idle, iowait, irq, softirq;
                         unsigned long long active;
+
                         sscanf(buf, "%*s %lld %lld %lld %lld %lld %lld %lld", &user, &nice, &system, &idle, &iowait, &irq, &softirq);
                         active = user + nice + system;
                         irq += softirq;
                         if (cpu == 0) {
                                 unsigned long long delta_active = (active + iowait + irq) - (cpu_stats[cpu].active + cpu_stats[cpu].iowait + cpu_stats[cpu].irq);
                                 unsigned long long delta_idle = idle - cpu_stats[cpu].idle;
-                                printf(" %.0f%%", ((double) delta_active) / (delta_active + delta_idle) * 100);
+                                printf(" %5.0f%%", ((double) delta_active) / (delta_active + delta_idle) * 100);
                         }
-                        printf(" %lld/%lld/%lld/%lld", active-cpu_stats[cpu].active, idle-cpu_stats[cpu].idle, iowait-cpu_stats[cpu].iowait, irq-cpu_stats[cpu].irq);
+                        printf(" %6lld/%-6lld", active-cpu_stats[cpu].active, idle-cpu_stats[cpu].idle);
                         cpu_stats[cpu].active = active;
                         cpu_stats[cpu].idle = idle;
                         cpu_stats[cpu].iowait = iowait;
@@ -44,7 +45,7 @@ int main(int argc, char **argv)
                         if ((f2 = fopen(buf, "r")) != NULL) {
                             unsigned freq;
                             fscanf(f2, "%u", &freq);
-                            printf(" %u", freq);
+                            printf(" %7u", freq);
                             fclose(f2);
                         }
                         cpu++;
