@@ -28,6 +28,15 @@ int main(int argc, char **argv)
                         unsigned long long user, nice, system, idle, iowait, irq, softirq;
                         unsigned long long active;
 
+                        sprintf(buf, "/sys/devices/system/cpu/cpu%d/online", cpu);
+                        if ((f2 = fopen(buf, "r")) != NULL) {
+                                int online = 1;
+                                fscanf(f2, "%d", &online);
+                                fclose(f2);
+                                if (! online) {
+                                        continue;
+                                }
+                        }
                         sscanf(buf, "%*s %lld %lld %lld %lld %lld %lld %lld", &user, &nice, &system, &idle, &iowait, &irq, &softirq);
                         active = user + nice + system;
                         irq += softirq;
