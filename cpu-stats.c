@@ -48,11 +48,7 @@ int main(int argc, char **argv)
                                     }
                             }
                         }
-                        printf(" %6lld/%-6lld", active-cpu_stats[cpu_id].active, idle-cpu_stats[cpu_id].idle);
-                        cpu_stats[cpu_id].active = active;
-                        cpu_stats[cpu_id].idle = idle;
-                        cpu_stats[cpu_id].iowait = iowait;
-                        cpu_stats[cpu_id].irq = irq;
+
                         sprintf(buf, "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_cur_freq", cpu_nr);
                         if ((f2 = fopen(buf, "r")) != NULL) {
                             unsigned freq;
@@ -60,6 +56,12 @@ int main(int argc, char **argv)
                             printf(" %7u", freq);
                             fclose(f2);
                         }
+
+                        printf(" %6lld/%-6lld", active-cpu_stats[cpu_id].active, idle-cpu_stats[cpu_id].idle);
+                        cpu_stats[cpu_id].active = active;
+                        cpu_stats[cpu_id].idle = idle;
+                        cpu_stats[cpu_id].iowait = iowait;
+                        cpu_stats[cpu_id].irq = irq;
                         cpu_id++;
                 } else if (strncmp(buf, "procs_running", 13) == 0) {
                         unsigned running = atoi(&buf[13]);
