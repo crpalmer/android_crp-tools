@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <memory.h>
 
 /* The current cryptfs version */
 #define CURRENT_MAJOR_VERSION 1
@@ -171,6 +172,22 @@ struct crypt_mnt_ftr {
   unsigned char sha256[SHA256_DIGEST_LENGTH];
 };
 
+#define PROPERTY_KEY_MAX 32
+#define PROPERTY_VALUE_MAX 92
+
+struct crypt_persist_entry {
+  char key[PROPERTY_KEY_MAX];
+  char val[PROPERTY_VALUE_MAX];
+};
+
+/* Should be exactly 4K in size */
+struct crypt_persist_data {
+  __le32 persist_magic;
+  __le32 persist_valid_entries;
+  __le32 persist_spare[30];
+  struct crypt_persist_entry persist_entry[0];
+};
+
 static void dump_hex(const char *str, unsigned char *d, size_t l)
 {
     printf("%s", str);
@@ -178,17 +195,33 @@ static void dump_hex(const char *str, unsigned char *d, size_t l)
     printf("\n");
 }
 
+static void dump_persist(struct crypt_persist_data *d)
+{
+    int i;
+
+    if (d->persist_magic != PERSIST_DATA_MAGIC) {
+        printf("persist block's magic is not valid, skipping: 0x%x\n", d->persist_magic);
+        return;
+    }
+
+    printf("persist block with %d entries:\n", d->persist_valid_entries);
+    for (i = 0; i < d->persist_valid_entries; i++) {
+        printf("\t%s = %s\n", d->persist_entry[i].key, d->persist_entry[i].val);
+    }
+}
+
+static unsigned char blob[1*1024*1024];
+
 int main(int argc, char **argv)
 {
     struct crypt_mnt_ftr f;
-    int i;
-    int any_extra = 0;
-    int skipped = 0;
 
-    if (fread(&f, 1, sizeof(f), stdin) <= 0) {
+    if (fread(blob, 1, sizeof(blob), stdin) <= 0) {
 	perror("<stdin>");
 	exit(1);
     }
+
+    memcpy(&f, blob, sizeof(f));
 
     printf("magic:                0x%x\n", f.magic);
     printf("version:              %d.%d\n", f.major_version, f.minor_version);
@@ -212,28 +245,9 @@ int main(int argc, char **argv)
     printf("keymaster_blob_size:  %d\n", f.keymaster_blob_size);
     dump_hex("scrypted_int_key:    ", f.scrypted_intermediate_key, SCRYPT_LEN);
     dump_hex("sha256:              ", f.sha256, SHA256_DIGEST_LENGTH);
-    while ((i = fgetc(stdin)) != EOF) {
-        if (!i && !any_extra) {
-            skipped++;
-        } else if (i && !any_extra) {
-            printf("Any extra data:\n");
-            if (skipped) printf(" [%d zeros]", skipped);
-            any_extra = 1;
-            skipped = 0;
-        } else if (!i) {
-            skipped++;
-        } else {
-            if (skipped > 0 && skipped < 10) do printf(" 00"); while (--skipped);
-            else if (skipped) printf(" [%d zeros]", skipped);
-            skipped = 0;
-            printf(" %02x", i);
-        }
-    }
-    if (any_extra) {
-        if (skipped < 10) do printf(" 00"); while (--skipped);
-        else if (skipped) printf(" [%d zeros]", skipped);
-        printf("\n");
-    }
+
+    dump_persist((struct crypt_persist_data *) &blob[f.persist_data_offset[0]]);
+    dump_persist((struct crypt_persist_data *) &blob[f.persist_data_offset[1]]);
 
     return 0;
 };
