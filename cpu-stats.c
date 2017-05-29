@@ -70,6 +70,7 @@ int main(int argc, char **argv)
             }
             fclose(f);
             printf("\n");
+            fflush(stdout);
         }
         sleep(1);
     }
